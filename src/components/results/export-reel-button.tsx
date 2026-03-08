@@ -28,7 +28,7 @@ export function ExportReelButton({ analysisId, score, exerciseType, videoUrl }: 
 
             // Dynamically import FFmpeg to avoid SSR issues
             const { FFmpeg } = await import("@ffmpeg/ffmpeg");
-            const { fetchFile } = await import("@ffmpeg/util");
+            const { fetchFile, toBlobURL } = await import("@ffmpeg/util");
 
             const ffmpeg = new FFmpeg();
 
@@ -36,7 +36,12 @@ export function ExportReelButton({ analysisId, score, exerciseType, videoUrl }: 
                 setProgress(Math.round(p * 100));
             });
 
-            await ffmpeg.load();
+            // Load explicit core paths to fix WASM and Cross-Origin errors on Vercel
+            const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+            await ffmpeg.load({
+                coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+                wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+            });
             toast.dismiss();
 
             // Create branded overlay image using canvas
@@ -91,19 +96,21 @@ export function ExportReelButton({ analysisId, score, exerciseType, videoUrl }: 
             ctx.font = "28px Inter, sans-serif";
             ctx.fillText("FormGod.ai – Fix your form instantly", 540, 1800);
 
-            // Convert canvas to image
+            // Convert canvas to image correctly formatted for FFmpeg WASM
             const overlayBlob = await new Promise<Blob>((resolve) =>
                 canvas.toBlob((b) => resolve(b!), "image/png")
             );
-            const overlayData = await fetchFile(overlayBlob);
-            await ffmpeg.writeFile("overlay.png", overlayData);
+            const overlayArrayBuffer = await overlayBlob.arrayBuffer();
+            await ffmpeg.writeFile("overlay.png", new Uint8Array(overlayArrayBuffer));
 
             let ffmpegArgs: string[] = [];
 
             if (videoUrl) {
                 // Fetch the actual source video and composite overlay on top of it
-                const videoData = await fetchFile(videoUrl);
-                await ffmpeg.writeFile("input-video.webm", videoData);
+                // We fetch manually to avoid strict CORS/fetchFile issues and ensure Uint8Array format
+                const videoRes = await fetch(videoUrl);
+                const videoArrayBuffer = await videoRes.arrayBuffer();
+                await ffmpeg.writeFile("input-video.webm", new Uint8Array(videoArrayBuffer));
 
                 // Complex filter to scale/crop the input video to fill 1080x1920,
                 // darken it slightly, then lay the static overlay over it
