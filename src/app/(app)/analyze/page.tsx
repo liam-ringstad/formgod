@@ -105,7 +105,7 @@ export default function AnalyzePage() {
                             exerciseType,
                             jointData,
                             score,
-                            tips: tips.map((t) => t.message),
+                            tips,
                         }),
                     });
                     if (res.ok) {
