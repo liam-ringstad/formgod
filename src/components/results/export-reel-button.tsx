@@ -108,14 +108,28 @@ export function ExportReelButton({ analysisId, score, exerciseType, videoUrl }: 
             if (videoUrl) {
                 // Fetch the actual source video and composite overlay on top of it
                 // We fetch manually to avoid strict CORS/fetchFile issues and ensure Uint8Array format
-                const videoRes = await fetch(videoUrl);
+                // Add explicit mode: cors to fix Safari WebKitBlobResource error 1
+                const videoRes = await fetch(videoUrl, {
+                    method: 'GET',
+                    mode: 'cors',
+                    credentials: 'omit',
+                });
+
+                if (!videoRes.ok) {
+                    throw new Error(`Failed to fetch video: ${videoRes.status} ${videoRes.statusText}`);
+                }
+
+                // Get dynamic extension to prevent FFmpeg container mismatch errors on Safari MP4s
+                const ext = videoUrl.split('.').pop()?.split('?')[0] || 'webm';
+                const inputName = `input-video.${ext}`;
+
                 const videoArrayBuffer = await videoRes.arrayBuffer();
-                await ffmpeg.writeFile("input-video.webm", new Uint8Array(videoArrayBuffer));
+                await ffmpeg.writeFile(inputName, new Uint8Array(videoArrayBuffer));
 
                 // Complex filter to scale/crop the input video to fill 1080x1920,
                 // darken it slightly, then lay the static overlay over it
                 ffmpegArgs = [
-                    "-i", "input-video.webm",
+                    "-i", inputName,
                     "-loop", "1", "-t", "15", "-i", "overlay.png",
                     "-filter_complex", "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,colorchannelmixer=r=0.6:g=0.6:b=0.6[bg];[bg][1:v]overlay=0:0:shortest=1",
                     "-c:v", "libx264",

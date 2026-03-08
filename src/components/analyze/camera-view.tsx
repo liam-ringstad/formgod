@@ -138,9 +138,26 @@ export function CameraView({ exerciseType, onRecordingComplete }: CameraViewProp
             ...(canvasStream?.getVideoTracks() || []),
         ]);
 
-        const recorder = new MediaRecorder(stream, {
-            mimeType: "video/webm;codecs=vp9",
-        });
+        // Find best supported mimeType for cross-browser compatibility (e.g., Safari iOS vs Chrome)
+        const getSupportedMimeType = () => {
+            const types = [
+                "video/webm;codecs=h264",
+                "video/webm;codecs=vp9",
+                "video/webm",
+                "video/mp4;codecs=avc1",
+                "video/mp4",
+                "", // Fallback to browser default
+            ];
+            for (const type of types) {
+                if (type === "" || MediaRecorder.isTypeSupported(type)) {
+                    return type;
+                }
+            }
+            return "";
+        };
+
+        const mimeType = getSupportedMimeType();
+        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
 
         chunksRef.current = [];
         jointDataRef.current = [];

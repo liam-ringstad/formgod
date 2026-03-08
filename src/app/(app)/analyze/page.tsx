@@ -71,7 +71,8 @@ export default function AnalyzePage() {
                 let originalVideoUrl = null;
                 try {
                     // Upload the actual raw video clip
-                    const videoPath = `${user.id}/videos/${Date.now()}.webm`;
+                    const ext = blob.type.includes("mp4") ? "mp4" : "webm";
+                    const videoPath = `${user.id}/videos/${Date.now()}.${ext}`;
                     await supabase.storage.from("formgod").upload(videoPath, blob);
                     const { data: videoPublicUrl } = supabase.storage.from("formgod").getPublicUrl(videoPath);
                     originalVideoUrl = videoPublicUrl.publicUrl;
