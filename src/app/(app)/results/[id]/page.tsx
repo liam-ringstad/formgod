@@ -134,6 +134,7 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
                     analysisId={analysis.id}
                     score={analysis.score}
                     exerciseType={analysis.exercise_type}
+                    videoUrl={analysis.reel_url}
                 />
 
                 <div className="flex gap-3">

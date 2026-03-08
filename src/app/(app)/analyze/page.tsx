@@ -66,9 +66,16 @@ export default function AnalyzePage() {
                 // 2. Compute score from joint data
                 const { score, tips } = computeFormScore(jointData as Record<string, { angle: number; ideal: [number, number]; deviation: number; tip: string; weight: number }>);
 
-                // 3. Upload thumbnail (first frame as screenshot)
+                // 3. Upload thumbnail (first frame as screenshot) and actual video
                 let thumbnailUrl = null;
+                let originalVideoUrl = null;
                 try {
+                    // Upload the actual raw video clip
+                    const videoPath = `${user.id}/videos/${Date.now()}.webm`;
+                    await supabase.storage.from("formgod").upload(videoPath, blob);
+                    const { data: videoPublicUrl } = supabase.storage.from("formgod").getPublicUrl(videoPath);
+                    originalVideoUrl = videoPublicUrl.publicUrl;
+
                     // Create a video element to extract first frame
                     const tempVideo = document.createElement("video");
                     tempVideo.src = URL.createObjectURL(blob);
@@ -92,7 +99,7 @@ export default function AnalyzePage() {
                         thumbnailUrl = publicUrl.publicUrl;
                     }
                 } catch (err) {
-                    console.warn("Thumbnail upload failed, continuing without:", err);
+                    console.warn("Media upload failed, continuing without:", err);
                 }
 
                 // 4. Call analysis API for AI-enhanced tips
@@ -127,6 +134,7 @@ export default function AnalyzePage() {
                         joint_data: jointData,
                         tips: enhancedTips,
                         thumbnail_url: thumbnailUrl,
+                        reel_url: originalVideoUrl, // Store the raw video here so we can composite it later
                     })
                     .select()
                     .single();

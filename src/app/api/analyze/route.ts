@@ -64,12 +64,15 @@ Return ONLY valid JSON array, no other text.`;
                 if (jsonMatch) {
                     const parsedTips = JSON.parse(jsonMatch[0]);
                     if (Array.isArray(parsedTips) && parsedTips.length > 0) {
-                        enhancedTips = parsedTips;
+                        // Ensure the parsed tips match the expected shape before replacing
+                        if (parsedTips[0]?.joint && parsedTips[0]?.message) {
+                            enhancedTips = parsedTips;
+                        }
                     }
                 }
             } catch (err) {
                 console.warn("Replicate API call failed, using local tips:", err);
-                // Fall back to local tips
+                // The `enhancedTips` variable naturally falls back to `tips` (which we passed in as intact objects now)
             }
         }
 

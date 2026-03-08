@@ -8,13 +8,14 @@ interface ExportReelButtonProps {
     analysisId: string;
     score: number;
     exerciseType: string;
+    videoUrl?: string | null;
 }
 
 /**
  * ExportReelButton – One-click viral reel generation using FFmpeg.wasm
  * Creates 15s vertical MP4 with branding for TikTok/Reels
  */
-export function ExportReelButton({ analysisId, score, exerciseType }: ExportReelButtonProps) {
+export function ExportReelButton({ analysisId, score, exerciseType, videoUrl }: ExportReelButtonProps) {
     const [exporting, setExporting] = useState(false);
     const [progress, setProgress] = useState(0);
 
@@ -97,17 +98,40 @@ export function ExportReelButton({ analysisId, score, exerciseType }: ExportReel
             const overlayData = await fetchFile(overlayBlob);
             await ffmpeg.writeFile("overlay.png", overlayData);
 
-            // Create a 15-second video from the static overlay
-            await ffmpeg.exec([
-                "-loop", "1",
-                "-i", "overlay.png",
-                "-c:v", "libx264",
-                "-t", "15",
-                "-pix_fmt", "yuv420p",
-                "-vf", "scale=1080:1920",
-                "-preset", "ultrafast",
-                "-y", "output.mp4",
-            ]);
+            let ffmpegArgs: string[] = [];
+
+            if (videoUrl) {
+                // Fetch the actual source video and composite overlay on top of it
+                const videoData = await fetchFile(videoUrl);
+                await ffmpeg.writeFile("input-video.webm", videoData);
+
+                // Complex filter to scale/crop the input video to fill 1080x1920,
+                // darken it slightly, then lay the static overlay over it
+                ffmpegArgs = [
+                    "-i", "input-video.webm",
+                    "-loop", "1", "-t", "15", "-i", "overlay.png",
+                    "-filter_complex", "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,colorchannelmixer=r=0.6:g=0.6:b=0.6[bg];[bg][1:v]overlay=0:0:shortest=1",
+                    "-c:v", "libx264",
+                    "-preset", "ultrafast",
+                    "-pix_fmt", "yuv420p",
+                    "-y", "output.mp4"
+                ];
+            } else {
+                // Fallback to static black background viral reel
+                ffmpegArgs = [
+                    "-loop", "1",
+                    "-i", "overlay.png",
+                    "-c:v", "libx264",
+                    "-t", "15",
+                    "-pix_fmt", "yuv420p",
+                    "-vf", "scale=1080:1920",
+                    "-preset", "ultrafast",
+                    "-y", "output.mp4",
+                ];
+            }
+
+            // Execute FFmpeg
+            await ffmpeg.exec(ffmpegArgs);
 
             // Read the output
             const data = await ffmpeg.readFile("output.mp4");
