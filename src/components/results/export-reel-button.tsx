@@ -36,6 +36,11 @@ export function ExportReelButton({ analysisId, score, exerciseType, videoUrl }: 
                 setProgress(Math.round(p * 100));
             });
 
+            // Stream ffmpeg console logs for deep debugging via Vercel / browser console
+            ffmpeg.on("log", ({ message }) => {
+                console.log("[FFmpeg]", message);
+            });
+
             // Load explicit core paths to fix WASM and Cross-Origin errors on Vercel
             const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
             await ffmpeg.load({
@@ -152,7 +157,12 @@ export function ExportReelButton({ analysisId, score, exerciseType, videoUrl }: 
             }
 
             // Execute FFmpeg
-            await ffmpeg.exec(ffmpegArgs);
+            console.log("Starting FFmpeg Export with args:", ffmpegArgs);
+            const exitCode = await ffmpeg.exec(ffmpegArgs);
+
+            if (exitCode !== 0) {
+                throw new Error(`FFmpeg execution failed with code ${exitCode}. Check console for details.`);
+            }
 
             // Read the output
             const data = await ffmpeg.readFile("output.mp4");
