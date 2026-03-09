@@ -138,7 +138,7 @@ export function ExportReelButton({ analysisId, score, exerciseType, videoUrl }: 
                 ffmpegArgs = [
                     "-i", inputName,
                     "-loop", "1", "-t", "15", "-i", "overlay.png",
-                    "-filter_complex", "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,colorchannelmixer=r=0.6:g=0.6:b=0.6[bg];[bg][1:v]overlay=0:0:shortest=1",
+                    "-filter_complex", `[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,colorchannelmixer=rr=0.6:gg=0.6:bb=0.6[bg];[bg][1:v]overlay=0:0:shortest=1`,
                     "-c:v", "libx264",
                     "-preset", "ultrafast",
                     "-pix_fmt", "yuv420p",
