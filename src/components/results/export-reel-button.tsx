@@ -36,8 +36,10 @@ export function ExportReelButton({ analysisId, score, exerciseType, videoUrl }: 
                 setProgress(Math.round(p * 100));
             });
 
+            const logs: string[] = [];
             // Stream ffmpeg console logs for deep debugging via Vercel / browser console
             ffmpeg.on("log", ({ message }) => {
+                logs.push(message);
                 console.log("[FFmpeg]", message);
             });
 
@@ -165,7 +167,15 @@ export function ExportReelButton({ analysisId, score, exerciseType, videoUrl }: 
             }
 
             // Read the output
-            const data = await ffmpeg.readFile("output.mp4");
+            let data: any;
+            try {
+                data = await ffmpeg.readFile("output.mp4");
+            } catch (fsErr) {
+                // If the file doesn't exist, FFmpeg failed right before here without exiting non-zero
+                const recentLogs = logs.slice(-10).join(" | ");
+                throw new Error(`FS Error: output.mp4 not created. FFmpeg exited 0 but failed. Last logs: ${recentLogs}`);
+            }
+
             const mp4Blob = new Blob([data as any], { type: "video/mp4" });
 
             // Auto-download
