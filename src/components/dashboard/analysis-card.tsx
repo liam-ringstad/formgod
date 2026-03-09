@@ -47,6 +47,7 @@ export function AnalysisCard({
                         <img
                             src={thumbnailUrl}
                             alt={exerciseType}
+                            crossOrigin="anonymous"
                             className="h-full w-full object-cover transition-transform group-hover:scale-105"
                         />
                     ) : (
